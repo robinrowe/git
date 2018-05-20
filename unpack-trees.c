@@ -103,6 +103,12 @@ void setup_unpack_trees_porcelain(struct unpack_trees_options *opts,
 	const char **msgs = opts->msgs;
 	const char *msg;
 
+	/*
+	 * As we add strings using `...appendf()`, this does not matter,
+	 * but when we clear the string list, we want them to be freed.
+	 */
+	opts->msgs_to_free.strdup_strings = 1;
+
 	if (!strcmp(cmd, "checkout"))
 		msg = advice_commit_before_merge
 		      ? _("Your local changes to the following files would be overwritten by checkout:\n%%s"
@@ -119,7 +125,7 @@ void setup_unpack_trees_porcelain(struct unpack_trees_options *opts,
 			  "Please commit your changes or stash them before you %s.")
 		      : _("Your local changes to the following files would be overwritten by %s:\n%%s");
 	msgs[ERROR_WOULD_OVERWRITE] = msgs[ERROR_NOT_UPTODATE_FILE] =
-		xstrfmt(msg, cmd, cmd);
+		string_list_appendf(&opts->msgs_to_free, msg, cmd, cmd)->string;
 
 	msgs[ERROR_NOT_UPTODATE_DIR] =
 		_("Updating the following directories would lose untracked files in them:\n%s");
@@ -139,7 +145,8 @@ void setup_unpack_trees_porcelain(struct unpack_trees_options *opts,
 		      ? _("The following untracked working tree files would be removed by %s:\n%%s"
 			  "Please move or remove them before you %s.")
 		      : _("The following untracked working tree files would be removed by %s:\n%%s");
-	msgs[ERROR_WOULD_LOSE_UNTRACKED_REMOVED] = xstrfmt(msg, cmd, cmd);
+	msgs[ERROR_WOULD_LOSE_UNTRACKED_REMOVED] =
+		string_list_appendf(&opts->msgs_to_free, msg, cmd, cmd)->string;
 
 	if (!strcmp(cmd, "checkout"))
 		msg = advice_commit_before_merge
@@ -156,7 +163,8 @@ void setup_unpack_trees_porcelain(struct unpack_trees_options *opts,
 		      ? _("The following untracked working tree files would be overwritten by %s:\n%%s"
 			  "Please move or remove them before you %s.")
 		      : _("The following untracked working tree files would be overwritten by %s:\n%%s");
-	msgs[ERROR_WOULD_LOSE_UNTRACKED_OVERWRITTEN] = xstrfmt(msg, cmd, cmd);
+	msgs[ERROR_WOULD_LOSE_UNTRACKED_OVERWRITTEN] =
+		string_list_appendf(&opts->msgs_to_free, msg, cmd, cmd)->string;
 
 	/*
 	 * Special case: ERROR_BIND_OVERLAP refers to a pair of paths, we
@@ -177,6 +185,12 @@ void setup_unpack_trees_porcelain(struct unpack_trees_options *opts,
 	/* rejected paths may not have a static buffer */
 	for (i = 0; i < ARRAY_SIZE(opts->unpack_rejects); i++)
 		opts->unpack_rejects[i].strdup_strings = 1;
+}
+
+void clear_unpack_trees_porcelain(struct unpack_trees_options *opts)
+{
+	string_list_clear(&opts->msgs_to_free, 0);
+	memset(opts->msgs, 0, sizeof(opts->msgs));
 }
 
 static int do_add_entry(struct unpack_trees_options *o, struct cache_entry *ce,
