@@ -353,17 +353,14 @@ static struct ref *get_ref_map(struct transport *transport,
 
 	const struct ref *remote_refs;
 
-	for (i = 0; i < rs->nr; i++) {
-		const struct refspec_item *item = &rs->items[i];
-		if (!item->exact_sha1) {
-			const char *glob = strchr(item->src, '*');
-			if (glob)
-				argv_array_pushf(&ref_prefixes, "%.*s",
-						 (int)(glob - item->src),
-						 item->src);
-			else
-				expand_ref_prefix(&ref_prefixes, item->src);
-		}
+	if (rs->nr)
+		refspec_ref_prefixes(rs, &ref_prefixes);
+	else if (transport->remote && transport->remote->fetch.nr)
+		refspec_ref_prefixes(&transport->remote->fetch, &ref_prefixes);
+
+	if (ref_prefixes.argc &&
+	    (tags == TAGS_SET || (tags == TAGS_DEFAULT && !rs->nr))) {
+		argv_array_push(&ref_prefixes, "refs/tags/");
 	}
 
 	remote_refs = transport_get_remote_refs(transport, &ref_prefixes);
