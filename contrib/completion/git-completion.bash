@@ -424,7 +424,8 @@ __gitcomp_file_direct ()
 
 	# use a hack to enable file mode in bash < 4
 	compopt -o filenames +o nospace 2>/dev/null ||
-	compgen -f /non-existing-dir/ > /dev/null
+	compgen -f /non-existing-dir/ >/dev/null ||
+	true
 }
 
 # Generates completion reply with compgen from newline-separated possible
@@ -446,7 +447,8 @@ __gitcomp_file ()
 
 	# use a hack to enable file mode in bash < 4
 	compopt -o filenames +o nospace 2>/dev/null ||
-	compgen -f /non-existing-dir/ > /dev/null
+	compgen -f /non-existing-dir/ >/dev/null ||
+	true
 }
 
 # Execute 'git ls-files', unless the --committable option is specified, in
