@@ -224,6 +224,19 @@ struct string_list_item *string_list_append(struct string_list *list,
 			list->strdup_strings ? xstrdup(string) : (char *)string);
 }
 
+struct string_list_item *string_list_appendf(struct string_list *list,
+					     const char *fmt, ...)
+{
+	struct string_list_item *retval;
+	va_list ap;
+
+	va_start(ap, fmt);
+	retval = string_list_append_nodup(list, xstrvfmt(fmt, ap));
+	va_end(ap);
+
+	return retval;
+}
+
 static int cmp_items(const void *a, const void *b, void *ctx)
 {
 	compare_strings_fn cmp = ctx;

@@ -209,6 +209,15 @@ void string_list_remove_duplicates(struct string_list *sorted_list, int free_uti
 struct string_list_item *string_list_append(struct string_list *list, const char *string);
 
 /**
+ * Add formatted string to the end of `list`. This function ignores
+ * the value of `list->strdup_strings` and always appends a freshly
+ * allocated string, so you will probably not want to use it with
+ * `strdup_strings = 0`.
+ */
+struct string_list_item *string_list_appendf(struct string_list *list,
+					     const char *fmt, ...);
+
+/**
  * Like string_list_append(), except string is never copied.  When
  * list->strdup_strings is set, this function can be used to hand
  * ownership of a malloc()ed string to list without making an extra
