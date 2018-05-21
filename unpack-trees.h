@@ -2,7 +2,7 @@
 #define UNPACK_TREES_H
 
 #include "tree-walk.h"
-#include "string-list.h"
+#include "argv-array.h"
 
 #define MAX_UNPACK_TREES 8
 
@@ -62,7 +62,7 @@ struct unpack_trees_options {
 	struct pathspec *pathspec;
 	merge_fn_t fn;
 	const char *msgs[NB_UNPACK_TREES_ERROR_TYPES];
-	struct string_list msgs_to_free;
+	struct argv_array msgs_to_free;
 	/*
 	 * Store error messages in an array, each case
 	 * corresponding to a error message type
