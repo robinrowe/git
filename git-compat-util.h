@@ -135,7 +135,9 @@
       !defined(_M_UNIX) && !defined(__sgi) && !defined(__DragonFly__) && \
       !defined(__TANDEM) && !defined(__QNX__) && !defined(__MirBSD__) && \
       !defined(__CYGWIN__)
+#ifndef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 600 /* glibc2 and AIX 5.3L need 500, OpenBSD needs 600 for S_ISLNK() */
+#endif
 #define _XOPEN_SOURCE_EXTENDED 1 /* AIX 5.3L needs this */
 #endif
 #define _ALL_SOURCE 1
@@ -302,12 +304,12 @@ extern char *gitdirname(char *);
 #define PATH_MAX 4096
 #endif
 
-#ifndef PRIuMAX
-#define PRIuMAX "llu"
+#ifndef  PRIuMAX 
+#define  PRIuMAX  "llu"
 #endif
 
 #ifndef SCNuMAX
-#define SCNuMAX PRIuMAX
+#define SCNuMAX  PRIuMAX 
 #endif
 
 #ifndef PRIu32
@@ -323,7 +325,7 @@ extern char *gitdirname(char *);
 #endif
 
 typedef uintmax_t timestamp_t;
-#define PRItime PRIuMAX
+#define PRItime  PRIuMAX 
 #define parse_timestamp strtoumax
 #define TIME_MAX UINTMAX_MAX
 
@@ -371,7 +373,7 @@ static inline int git_offset_1st_component(const char *path)
 #endif
 
 #ifndef find_last_dir_sep
-static inline char *git_find_last_dir_sep(const char *path)
+static inline const char *git_find_last_dir_sep(const char *path)
 {
 	return strrchr(path, '/');
 }
@@ -779,7 +781,7 @@ extern try_to_free_t set_try_to_free_routine(try_to_free_t);
 static inline size_t st_add(size_t a, size_t b)
 {
 	if (unsigned_add_overflows(a, b))
-		die("size_t overflow: %"PRIuMAX" + %"PRIuMAX,
+		die("size_t overflow: %" PRIuMAX " + %" PRIuMAX ,
 		    (uintmax_t)a, (uintmax_t)b);
 	return a + b;
 }
@@ -789,7 +791,7 @@ static inline size_t st_add(size_t a, size_t b)
 static inline size_t st_mult(size_t a, size_t b)
 {
 	if (unsigned_mult_overflows(a, b))
-		die("size_t overflow: %"PRIuMAX" * %"PRIuMAX,
+		die("size_t overflow: %" PRIuMAX " * %" PRIuMAX ,
 		    (uintmax_t)a, (uintmax_t)b);
 	return a * b;
 }
@@ -797,7 +799,7 @@ static inline size_t st_mult(size_t a, size_t b)
 static inline size_t st_sub(size_t a, size_t b)
 {
 	if (a < b)
-		die("size_t underflow: %"PRIuMAX" - %"PRIuMAX,
+		die("size_t underflow: %" PRIuMAX " - %" PRIuMAX ,
 		    (uintmax_t)a, (uintmax_t)b);
 	return a - b;
 }

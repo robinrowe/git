@@ -682,8 +682,12 @@ EXTRA_PROGRAMS =
 # ... and all the rest that could be moved out of bindir to gitexecdir
 PROGRAMS += $(EXTRA_PROGRAMS)
 
+Connections.o: Connections.cpp Connections.h
+	g++ -g -c Connections.cpp
+
 PROGRAM_OBJS += credential-store.o
 PROGRAM_OBJS += daemon.o
+#PROGRAM_OBJS += Connections.o
 PROGRAM_OBJS += fast-import.o
 PROGRAM_OBJS += http-backend.o
 PROGRAM_OBJS += imap-send.o

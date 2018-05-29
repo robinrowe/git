@@ -4,6 +4,7 @@
 #include "run-command.h"
 #include "strbuf.h"
 #include "string-list.h"
+#include "Connections.h"
 
 #ifdef NO_INITGROUPS
 #define initgroups(x, y) (0) /* nothing */
@@ -804,109 +805,13 @@ static int execute(void)
 	logerror("Protocol error: '%s'", line);
 	return -1;
 }
-
-static int addrcmp(const struct sockaddr_storage *s1,
-    const struct sockaddr_storage *s2)
-{
-	const struct sockaddr *sa1 = (const struct sockaddr*) s1;
-	const struct sockaddr *sa2 = (const struct sockaddr*) s2;
-
-	if (sa1->sa_family != sa2->sa_family)
-		return sa1->sa_family - sa2->sa_family;
-	if (sa1->sa_family == AF_INET)
-		return memcmp(&((struct sockaddr_in *)s1)->sin_addr,
-		    &((struct sockaddr_in *)s2)->sin_addr,
-		    sizeof(struct in_addr));
-#ifndef NO_IPV6
-	if (sa1->sa_family == AF_INET6)
-		return memcmp(&((struct sockaddr_in6 *)s1)->sin6_addr,
-		    &((struct sockaddr_in6 *)s2)->sin6_addr,
-		    sizeof(struct in6_addr));
-#endif
-	return 0;
-}
-
-static int max_connections = 32;
-
-static unsigned int live_children;
-
-static struct child {
-	struct child *next;
-	struct child_process cld;
-	struct sockaddr_storage address;
-} *firstborn;
-
-static void add_child(struct child_process *cld, struct sockaddr *addr, socklen_t addrlen)
-{
-	struct child *newborn, **cradle;
-
-	newborn = xcalloc(1, sizeof(*newborn));
-	live_children++;
-	memcpy(&newborn->cld, cld, sizeof(*cld));
-	memcpy(&newborn->address, addr, addrlen);
-	for (cradle = &firstborn; *cradle; cradle = &(*cradle)->next)
-		if (!addrcmp(&(*cradle)->address, &newborn->address))
-			break;
-	newborn->next = *cradle;
-	*cradle = newborn;
-}
-
-/*
- * This gets called if the number of connections grows
- * past "max_connections".
- *
- * We kill the newest connection from a duplicate IP.
- */
-static void kill_some_child(void)
-{
-	const struct child *blanket, *next;
-
-	if (!(blanket = firstborn))
-		return;
-
-	for (; (next = blanket->next); blanket = next)
-		if (!addrcmp(&blanket->address, &next->address)) {
-			kill(blanket->cld.pid, SIGTERM);
-			break;
-		}
-}
-
-static void check_dead_children(void)
-{
-	int status;
-	pid_t pid;
-
-	struct child **cradle, *blanket;
-	for (cradle = &firstborn; (blanket = *cradle);)
-		if ((pid = waitpid(blanket->cld.pid, &status, WNOHANG)) > 1) {
-			const char *dead = "";
-			if (status)
-				dead = " (with error)";
-			loginfo("[%"PRIuMAX"] Disconnected%s", (uintmax_t)pid, dead);
-
-			/* remove the child */
-			*cradle = blanket->next;
-			live_children--;
-			child_process_clear(&blanket->cld);
-			free(blanket);
-		} else
-			cradle = &blanket->next;
-}
-
 static struct argv_array cld_argv = ARGV_ARRAY_INIT;
 static void handle(int incoming, struct sockaddr *addr, socklen_t addrlen)
-{
-	struct child_process cld = CHILD_PROCESS_INIT;
-
-	if (max_connections && live_children >= max_connections) {
-		kill_some_child();
-		sleep(1);  /* give it some time to die */
-		check_dead_children();
-		if (live_children >= max_connections) {
-			close(incoming);
-			logerror("Too many children, dropping connection");
-			return;
-		}
+{	struct child_process cld = CHILD_PROCESS_INIT;
+	if(!CloseDeadConnections())
+	{	close(incoming);
+		logerror("Too many children, dropping connection");
+		return;
 	}
 
 	if (addr->sa_family == AF_INET) {
@@ -934,7 +839,7 @@ static void handle(int incoming, struct sockaddr *addr, socklen_t addrlen)
 	if (start_command(&cld))
 		logerror("unable to fork");
 	else
-		add_child(&cld, addr, addrlen);
+		AddConnection(&cld, addr, addrlen);
 }
 
 static void child_handler(int signo)
@@ -1160,7 +1065,7 @@ static int service_loop(struct socketlist *socklist)
 	for (;;) {
 		int i;
 
-		check_dead_children();
+		CloseDeadConnections();
 
 		if (poll(pfd, socklist->nr, -1) < 0) {
 			if (errno != EINTR) {
@@ -1340,9 +1245,7 @@ int cmd_main(int argc, const char **argv)
 			continue;
 		}
 		if (skip_prefix(arg, "--max-connections=", &v)) {
-			max_connections = atoi(v);
-			if (max_connections < 0)
-				max_connections = 0;	        /* unlimited */
+			SetMaxConnections(atoi(v));
 			continue;
 		}
 		if (!strcmp(arg, "--strict-paths")) {
